@@ -23,9 +23,9 @@
 #include "lwip/dns.h"
 
 /* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER "example.com"
-#define WEB_PORT "80"
-#define WEB_PATH "/"
+#define WEB_SERVER "10.0.0.163"
+#define WEB_PORT "8080"
+#define WEB_PATH "/data/hyperion-cantos.txt"
 
 static const char *TAG = "example";
 
@@ -100,14 +100,23 @@ static void http_get_task(void *pvParameters)
         }
         ESP_LOGI(TAG, "... set socket receiving timeout success");
 
+    // Get start time
+    uint64_t start = esp_timer_get_time();
+    int bytes_read = 0;
+
         /* Read HTTP response */
         do {
             bzero(recv_buf, sizeof(recv_buf));
             r = read(s, recv_buf, sizeof(recv_buf)-1);
+                    bytes_read += r;
+
             for(int i = 0; i < r; i++) {
-                putchar(recv_buf[i]);
+                // putchar(recv_buf[i]);
             }
         } while(r > 0);
+    uint64_t end = esp_timer_get_time();
+    uint64_t elapsed = end - start;
+    ESP_LOGI(TAG, "Downloaded %d bytes in elapsed: %.2f s (%.2f kbps / %.2f KB/s)", bytes_read, elapsed/1000000.0f, bytes_read*8.0f/(1000.0*elapsed/1000000.0f), bytes_read/(1000.0*elapsed/1000000.0f));
 
         ESP_LOGI(TAG, "... done reading from socket. Last read return=%d errno=%d.", r, errno);
         close(s);

@@ -37,9 +37,18 @@
 #endif
 
 /* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER "www.howsmyssl.com"
-#define WEB_PORT "443"
-#define WEB_URL "https://www.howsmyssl.com/a/check"
+// #define WEB_SERVER "10.0.0.163:4443"
+// #define WEB_URL "https://192.168.1.145:4443/data/hyperion-cantos.txt"
+
+// #define WEB_SERVER "nyc3.digitaloceanspaces.com"
+// #define WEB_URL "https://nyc3.digitaloceanspaces.com/sol-cloud/uploads/hyperion-cantos.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=DO00Q9MT7TLXHYDWUFQW%2F20221020%2Fnyc3%2Fs3%2Faws4_request&X-Amz-Date=20221020T183358Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=aec5beebe4617868ab504eaace826e595f24ccb13667f0e7c3bdafd9769404aa"
+#define WEB_SERVER "raw.githubusercontent.com"
+#define WEB_URL "https://raw.githubusercontent.com/espressif/esp32-wifi-lib/master/esp32s3/libnet80211.a"
+
+// #define WEB_SERVER "www.howsmyssl.com"
+// #define WEB_PORT "443"
+// #define WEB_URL "https://www.howsmyssl.com/a/check"
+
 
 #define SERVER_URL_MAX_SZ 256
 
@@ -83,6 +92,7 @@ static void https_get_request(esp_tls_cfg_t cfg, const char *WEB_SERVER_URL, con
     char buf[512];
     int ret, len;
 
+    cfg.skip_common_name = true;
     struct esp_tls *tls = esp_tls_conn_http_new(WEB_SERVER_URL, &cfg);
 
     if (tls != NULL) {
@@ -115,6 +125,9 @@ static void https_get_request(esp_tls_cfg_t cfg, const char *WEB_SERVER_URL, con
 
     ESP_LOGI(TAG, "Reading HTTP response...");
 
+    // Get start time
+    uint64_t start = esp_timer_get_time();
+    int bytes_read = 0;
     do {
         len = sizeof(buf) - 1;
         bzero(buf, sizeof(buf));
@@ -135,13 +148,19 @@ static void https_get_request(esp_tls_cfg_t cfg, const char *WEB_SERVER_URL, con
         }
 
         len = ret;
-        ESP_LOGD(TAG, "%d bytes read", len);
+        // ESP_LOGD(TAG, "%d bytes read", len);
         /* Print response directly to stdout as it is read */
+        bytes_read += len;
         for (int i = 0; i < len; i++) {
-            putchar(buf[i]);
+            // putchar(buf[i]);
         }
-        putchar('\n'); // JSON output doesn't have a newline at end
     } while (1);
+    // putchar('\n'); // JSON output doesn't have a newline at end
+
+    // Calculate time elapsed
+    uint64_t end = esp_timer_get_time();
+    uint64_t elapsed = end - start;
+    ESP_LOGI(TAG, "Downloaded %d bytes in elapsed: %.2f s (%.2f kbps / %.2f KB/s)", bytes_read, elapsed/1000000.0f, bytes_read*8.0f/(1000.0*elapsed/1000000.0f), bytes_read/(1000.0*elapsed/1000000.0f));
 
 exit:
     esp_tls_conn_delete(tls);
@@ -154,7 +173,7 @@ exit:
 #if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
 static void https_get_request_using_crt_bundle(void)
 {
-    ESP_LOGI(TAG, "https_request using crt bundle");
+    ESP_LOGI(TAG, "https_request using crt bundle!!!!");
     esp_tls_cfg_t cfg = {
         .crt_bundle_attach = esp_crt_bundle_attach,
     };
