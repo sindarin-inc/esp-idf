@@ -23,9 +23,11 @@
 #include "lwip/dns.h"
 
 /* Constants that aren't configurable in menuconfig */
-#define WEB_SERVER "10.0.0.163"
-#define WEB_PORT "8080"
-#define WEB_PATH "/data/hyperion-cantos.txt"
+#define WEB_SERVER "api.sindarin.com"
+#define WEB_PORT "80"
+#define WEB_PATH "/proxy/?url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%2F20230110%2Fnyc3%2Fs3%2Faws4_request%26X-Amz-Date%3D20230110T002724Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D6c1b45842537fcb95a539f13faeec7dd582400cadd5b4cd14030668d60a1d5a7"
+
+//http://api.sindarin.com/proxy/?url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%252F20230109%252Fnyc3%252Fs3%252Faws4_request%26X-Amz-Date%3D20230109T202650Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D4c7f7a4ccc34ade7d8dfe8680a080311d257afa9179031350f8f922ebb9f144c
 
 static const char *TAG = "example";
 

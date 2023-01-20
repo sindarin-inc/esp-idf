@@ -24,7 +24,7 @@
 
 #include "esp_http_client.h"
 
-#define MAX_HTTP_RECV_BUFFER 512
+#define MAX_HTTP_RECV_BUFFER 16384
 #define MAX_HTTP_OUTPUT_BUFFER 2048
 static const char *TAG = "HTTP_CLIENT";
 
@@ -126,9 +126,9 @@ static void http_rest_with_url(void)
      * If URL as well as host and path parameters are specified, values of host and path will be considered.
      */
     esp_http_client_config_t config = {
-        .host = "httpbin.org",
-        .path = "/get",
-        .query = "esp",
+        .host = "api.sindarin.com",
+        .path = "/proxy/",
+        .query = "url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%252F20230109%252Fnyc3%252Fs3%252Faws4_request%26X-Amz-Date%3D20230109T204822Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D6e3b3a3e01bff60ce24a983997cd86ea6b348fd8c631c992ad8ce58685c5a932",
         .event_handler = _http_event_handler,
         .user_data = local_response_buffer,        // Pass address of local buffer to get response
         .disable_auto_redirect = true,
@@ -471,20 +471,40 @@ static void http_redirect_to_https(void)
     esp_http_client_cleanup(client);
 }
 
-
 static void http_download_chunk(void)
 {
+    // http://api.sindarin.com/proxy/?url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%252F20230109%252Fnyc3%252Fs3%252Faws4_request%26X-Amz-Date%3D20230109T230300Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D84b939ec3db813bec89b22f5abf8f987b580df9fede653d29527ec19bc1e3c27
     esp_http_client_config_t config = {
         .url = "http://httpbin.org/stream-bytes/8912",
+        // .url = "http://api.sindarin.com/proxy/?url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%252F20230109%252Fnyc3%252Fs3%252Faws4_request%26X-Amz-Date%3D20230109T232614Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3Df7ccb0481421aebcbb96103f230220d882f0c42bc11de7b2b082c406736a4ccd",
+        // .host = "api.sindarin.com",
+        // .path = "/proxy/",
+        // .query = "url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%252F20230109%252Fnyc3%252Fs3%252Faws4_request%26X-Amz-Date%3D20230109T204822Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D6e3b3a3e01bff60ce24a983997cd86ea6b348fd8c631c992ad8ce58685c5a932",
+
         .event_handler = _http_event_handler,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_err_t err = esp_http_client_perform(client);
+
+    esp_err_t err = ESP_OK;
+    // while (err == ESP_OK) {
+        err = esp_http_client_perform(client);
+        vTaskDelay(100/portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "Error %d", err);
+    // }
+    ESP_LOGI(TAG, "DONE");
+
+    // How to get this to actually run
+    // esp_client_get_data()
+
+    int content_length =  esp_http_client_fetch_headers(client);
+    ESP_LOGI(TAG, "HEAD %d", content_length);
+
 
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "HTTP chunk encoding Status = %d, content_length = %d",
                 esp_http_client_get_status_code(client),
                 esp_http_client_get_content_length(client));
+
     } else {
         ESP_LOGE(TAG, "Error perform http request %s", esp_err_to_name(err));
     }
@@ -499,7 +519,11 @@ static void http_perform_as_stream_reader(void)
         return;
     }
     esp_http_client_config_t config = {
-        .url = "http://httpbin.org/get",
+        // .url = "http://httpbin.org/get",
+        // .url = "http://api.sindarin.com/proxy/?url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%2F20230110%2Fnyc3%2Fs3%2Faws4_request%26X-Amz-Date%3D20230110T002724Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D6c1b45842537fcb95a539f13faeec7dd582400cadd5b4cd14030668d60a1d5a7"
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .url = "http://api.sindarin.com/proxy/?url=https%3A%2F%2Fnyc3.digitaloceanspaces.com%2Fsol-cloud%2Fuploads%2Fold-testament.txt%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DDO00Q9MT7TLXHYDWUFQW%252F20230110%252Fnyc3%252Fs3%252Faws4_request%26X-Amz-Date%3D20230110T043709Z%26X-Amz-Expires%3D3600%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Signature%3D2aedcfce9e17b54dbea1d93149ebb42e1948413ec8ae9113b9b786c198af3610"
+
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err;
@@ -509,18 +533,28 @@ static void http_perform_as_stream_reader(void)
         return;
     }
     int content_length =  esp_http_client_fetch_headers(client);
+
     int total_read_len = 0, read_len;
-    if (total_read_len < content_length && content_length <= MAX_HTTP_RECV_BUFFER) {
-        read_len = esp_http_client_read(client, buffer, content_length);
+    int64_t start = esp_timer_get_time();
+
+    while (total_read_len < content_length) {
+        read_len = esp_http_client_read(client, buffer, MAX_HTTP_RECV_BUFFER);
         if (read_len <= 0) {
             ESP_LOGE(TAG, "Error read data");
         }
-        buffer[read_len] = 0;
-        ESP_LOGD(TAG, "read_len = %d", read_len);
+        // buffer[read_len] = 0;
+        // ESP_LOGD(TAG, "read_len = %d", read_len);
+        total_read_len += read_len;
     }
-    ESP_LOGI(TAG, "HTTP Stream reader Status = %d, content_length = %d",
-                    esp_http_client_get_status_code(client),
-                    esp_http_client_get_content_length(client));
+
+    int64_t end = esp_timer_get_time();;
+    int64_t duration = end - start;
+    float bps = total_read_len / (duration/1000000.0f);
+
+    ESP_LOGI(TAG, "GOT %d in %" PRId64 "us (%f Bps %f KB/s, %f kbps)", total_read_len, duration, bps, bps/1000, 8*bps/1000);
+    // ESP_LOGI(TAG, "HTTP Stream reader Status = %d, content_length = %d",
+    //                 esp_http_client_get_status_code(client),
+    //                 esp_http_client_get_content_length(client));
     esp_http_client_close(client);
     esp_http_client_cleanup(client);
     free(buffer);
@@ -696,30 +730,39 @@ static void http_partial_download(void)
 
 static void http_test_task(void *pvParameters)
 {
-    http_rest_with_url();
-    http_rest_with_hostname_path();
-#if CONFIG_ESP_HTTP_CLIENT_ENABLE_BASIC_AUTH
-    http_auth_basic();
-    http_auth_basic_redirect();
-#endif
-#if CONFIG_ESP_HTTP_CLIENT_ENABLE_DIGEST_AUTH
-    http_auth_digest();
-#endif
-    http_relative_redirect();
-    http_absolute_redirect();
-#if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-    https_with_url();
-#endif
-    https_with_hostname_path();
-    http_redirect_to_https();
-    http_download_chunk();
+//     http_rest_with_url();
+//     http_rest_with_hostname_path();
+// #if CONFIG_ESP_HTTP_CLIENT_ENABLE_BASIC_AUTH
+//     http_auth_basic();
+//     http_auth_basic_redirect();
+// #endif
+// #if CONFIG_ESP_HTTP_CLIENT_ENABLE_DIGEST_AUTH
+//     http_auth_digest();
+// #endif
+//     http_relative_redirect();
+//     http_absolute_redirect();
+// #if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
+//     https_with_url();
+// #endif
+//     https_with_hostname_path();
+//     http_redirect_to_https();
+    // http_download_chunk();
     http_perform_as_stream_reader();
-    https_async();
-    https_with_invalid_url();
-    http_native_request();
-#if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
-    http_partial_download();
-#endif
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+    http_perform_as_stream_reader();
+//     https_async();
+//     https_with_invalid_url();
+//     http_native_request();
+// #if CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
+//     http_partial_download();
+// #endif
 
     ESP_LOGI(TAG, "Finish http example");
     vTaskDelete(NULL);
